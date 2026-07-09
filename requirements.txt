@@ -1,0 +1,21 @@
+# Core (used by data_pipeline.py, models/, train.py, tests/ — all tested and working)
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.0
+
+# API layer (src/api.py) — written and syntax-checked, not execution-tested
+# in this environment due to no internet access. Install and test locally
+# or on ZCHPC CCE before relying on it.
+fastapi==0.111.0
+uvicorn==0.30.1
+pydantic==2.7.1
+
+# Testing
+pytest==8.2.2
+
+# Recommended upgrade path (see README "Swapping in a real deep learning
+# framework"): once GPU access is available (ZCHPC CCE), replace the
+# from-scratch NumPy GRU in models/gru_model.py with an equivalent
+# torch.nn.GRU implementation for faster training and easier
+# hyperparameter search. Uncomment below once available:
+# torch==2.3.1
