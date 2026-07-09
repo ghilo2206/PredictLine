@@ -20,7 +20,8 @@ Powertel's OPGW fibre, IP/MPLS, and LoRaWAN-based IoT communication networks car
 | Threshold baseline model | ✅ Working, run and verified |
 | GRU fault-risk model | ✅ Working, trained and evaluated (from-scratch NumPy implementation — see note below) |
 | Evaluation harness (GRU vs baseline, lead-time comparison) | ✅ Working, produces real numbers on synthetic data |
-| Unit tests | ✅ 11/11 passing |
+| Cross-dataset validation harness (Option A) | ✅ Harness built and dry-run verified; ⚠️ not yet run on real Cisco/TelecomTS data — see Section 5a |
+| Unit tests | ✅ 17/17 passing |
 | FastAPI backend | ⚠️ Written and syntax-checked, **not execution-tested** (no internet access in the dev sandbox to install fastapi/uvicorn) |
 | Real Powertel telemetry | ❌ Not yet integrated — see Dataset Provenance below |
 | Dashboard / frontend | ❌ Not yet built — natural pairing point with a Design-track team |
@@ -70,8 +71,23 @@ Mean GRU lead time:       ~43 hours before fault
 `src/data_pipeline.py` generates **synthetic** telemetry: signal loss, latency, packet loss, and temperature time series with an injected slow degradation ramp (48–96 hours) before a hard fault. This mimics the general shape of OPGW/IoT fault progression described in the literature (see proposal references), but is **not** real Powertel data.
 
 - **Real data pathway:** one of our team members works at Powertel; this gives us a genuine internal channel to pursue a formal data-sharing agreement, but that agreement is not yet in place as of this submission.
-- **Synthetic fallback (current state):** parametric simulation (see code, fully commented). A TimeGAN-based generator calibrated against public telecom fault datasets, with statistical correlation validation (KS-test on marginals, autocorrelation comparison), is the planned next step per the AI4I proposal Section 4.2 — not yet implemented in this repo.
+- **Public real-network validation (in progress):** rather than only relying on synthetic data, we are validating the model against two independent, real, publicly available telecom telemetry sources — see Section 5a below.
 - No personal or individually identifiable data is used or generated anywhere in this repository.
+
+## 5a. Cross-dataset validation (Option A — in progress, not yet run on real data)
+
+To strengthen the "does this generalize beyond our synthetic data" question, we are validating PredictLine against two real, independent, public network telemetry datasets, **without merging them into one blended pool** (their KPIs, scales, and anomaly types differ too much for a naive merge to be meaningful):
+
+| Source | What it is | Status |
+|---|---|---|
+| [cisco-ie/telemetry](https://github.com/cisco-ie/telemetry) | Real network telemetry released by Cisco for anomaly-detection research (BGP anomalies, port flaps, transceiver events), published alongside ACM SIGCOMM/IEEE INFOCOM papers | Adapter written (`src/adapters/cisco_adapter.py`), column mapping **not yet finalized** against real files |
+| [AliMaatouk/TelecomTS](https://huggingface.co/datasets/AliMaatouk/TelecomTS) | Real observability data from a 5G telecom testbed, de-anonymized with absolute scale preserved | Adapter written (`src/adapters/telecomts_adapter.py`), KPI selection **not yet finalized** against real files |
+
+**The approach (`src/cross_dataset_eval.py`):** train the GRU on one real dataset, test it on the other, then flip direction. A model that holds up when tested on a completely different real network is stronger evidence than one only validated on synthetic data — this is a deliberately harder bar to clear than reporting a single in-sample number.
+
+**Current status, stated plainly:** the harness itself is built, tested, and runs correctly end-to-end (verified via `python src/cross_dataset_eval.py --dry-run`, using mock data shaped like each dataset's real schema — see the script's docstring). **It has not yet been run against the actual downloaded datasets** — that requires pulling the real files (both need internet access we didn't have while building this) and finalizing two small column-mapping TODOs in the adapters. See those files for exact next steps.
+
+
 
 ## 6. Repository structure
 
@@ -84,7 +100,11 @@ predictline/
 ├── src/
 │   ├── data_pipeline.py       ← synthetic data generation + windowing + normalization
 │   ├── train.py               ← trains GRU, runs baseline, prints comparison report
+│   ├── cross_dataset_eval.py  ← Option A: train on one real dataset, test on another
 │   ├── api.py                 ← FastAPI skeleton (see status table above)
+│   ├── adapters/
+│   │   ├── cisco_adapter.py       ← loads cisco-ie/telemetry (needs column TODOs filled in)
+│   │   └── telecomts_adapter.py   ← loads AliMaatouk/TelecomTS (needs KPI TODOs filled in)
 │   └── models/
 │       ├── gru_model.py            ← from-scratch NumPy GRU classifier
 │       └── threshold_baseline.py   ← rule-based "current practice" baseline
@@ -93,7 +113,8 @@ predictline/
 ├── docs/
 │   └── architecture_diagram.png    ← system architecture (also in the AI4I proposal)
 └── tests/
-    └── test_data_pipeline.py  ← 11 tests, all passing (see Section 4 to run them)
+    ├── test_data_pipeline.py      ← 11 tests, all passing
+    └── test_cross_dataset_eval.py ← 6 tests, all passing (harness logic, dry-run verified)
 ```
 
 ## 7. System architecture
