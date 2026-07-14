@@ -8,8 +8,27 @@ PredictLine predicts communication-network fault risk *before* a hard failure oc
 
 ---
 
+## Demo
+
+Screenshots of the working prototype and evaluation results (see [Section 3](#3-results-synthetic-data) and [Section 4](#4-results-real-world-data-cisco-ietelemetry) below for full discussion):
+
+**Test suite — 25/25 passing**
+
+![Tests passing](docs/screenshots/01_tests_passing.png)
+
+**Synthetic data: GRU vs threshold baseline** — GRU achieves ~43 hour fault-detection lead time vs ~21 hours for the reactive baseline
+
+![Synthetic results](docs/screenshots/02_synthetic_results.png)
+
+**Real cisco-ie/telemetry: GRU vs threshold baseline** — AUC 0.935 vs a baseline that achieves only 0.008 precision
+
+![Real data results](docs/screenshots/03_real_cisco_results.png)
+
+---
+
 ## Contents
 
+- [Demo](#demo)
 1. [Status at a glance](#1-status-at-a-glance)
 2. [Quickstart](#2-quickstart)
 3. [Results: synthetic data](#3-results-synthetic-data)
@@ -119,6 +138,7 @@ Before further scale-up (GPU training on ZCHPC CCE, larger hyperparameter search
 ```
 predictline/
 ├── README.md
+├── pyproject.toml             project metadata and tooling config
 ├── requirements.txt          pinned dependency versions
 ├── .env.example               environment variable template, no secrets
 ├── LICENSE                    MIT (code only)
@@ -137,7 +157,8 @@ predictline/
 ├── data/
 │   └── sample_synthetic.csv    generated sample data
 ├── docs/
-│   └── architecture_diagram.png
+│   ├── architecture_diagram.png
+│   └── screenshots/            demo evidence (see Demo section above)
 └── tests/
     ├── test_data_pipeline.py
     ├── test_cross_dataset_eval.py
@@ -163,11 +184,10 @@ Full description in the proposal, Section 2.4.
 ## 10. Team
 
 - Mlalazi Mzwakhe — Powertel Communications
-- Laurah Murenge - Telone Pvt Ltd
-- Gift Ndlovu — Telone Pvt Ltd
-- Keith Ufumeli — Telone Pvt Ltd
-- Wellington Nhidza -Telone Pvt Ltd
-
+- Laurah Murenge — TelOne Pvt Ltd
+- Gift Ndlovu — TelOne Pvt Ltd
+- Keith Ufumeli — TelOne Pvt Ltd
+- Wellington Nhidza — TelOne Pvt Ltd
 
 ## 11. Licence
 
