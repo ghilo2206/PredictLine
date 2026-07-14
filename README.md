@@ -6,13 +6,11 @@ AI4I Challenge 2026 — Track 3 (Development) submission.
 
 ---
 
-## 1. The problem, in one paragraph
+## 1. The problem
 
-Powertel's OPGW fibre, IP/MPLS, and LoRaWAN-based IoT communication networks carry the telemetry that keeps Zimbabwe's electricity grid monitored. Fault management today is reactive — thresholds fire only after service has already degraded. PredictLine predicts fault risk **before** a hard failure, using a sequence model (GRU) trained on network telemetry, so operators get a lead-time window to intervene instead of just an outage alert.
+Powertel's OPGW fibre, IP/MPLS, and LoRaWAN-based IoT communication networks carry the telemetry that keeps Zimbabwe's electricity grid monitored. Fault management today is reactive, thresholds fire only after service has already degraded. PredictLine predicts fault risk **before** a hard failure, using a sequence model (GRU) trained on network telemetry, so operators get a lead-time window to intervene instead of just an outage alert.
 
-## 2. What's real vs synthetic right now — read this first
-
-**Be honest with yourself and with judges about what's actually working here:**
+## 2. What's real vs synthetic right now
 
 | Component | Status |
 |---|---|
@@ -23,11 +21,10 @@ Powertel's OPGW fibre, IP/MPLS, and LoRaWAN-based IoT communication networks car
 | **Real-data training on cisco-ie/telemetry** (`train_real_cisco.py`) | ✅ Working, trained and evaluated on real network telemetry — AUC 0.935 held out by case+device. See Section 5b. |
 | Cross-dataset validation harness (Option A) | ✅ Harness built and dry-run verified; ⚠️ the Cisco side now trains on real data (Section 5b), but the TelecomTS side of this specific harness still uses mock data — see Section 5a |
 | Unit tests | ✅ 25/25 passing |
-| FastAPI backend | ⚠️ Written and syntax-checked, **not execution-tested** (no internet access in the dev sandbox to install fastapi/uvicorn) |
+| FastAPI backend | ⚠️ Written and syntax-checked, **not execution-tested**|
 | Real Powertel telemetry | ❌ Not yet integrated — see Dataset Provenance below |
-| Dashboard / frontend | ❌ Not yet built — natural pairing point with a Design-track team |
+| Dashboard / frontend | ❌ Not yet built |
 
-We would rather show you exactly where the line between "working" and "planned" sits than dress up an untested claim. This matches the AI4I Supporting Guidance's explicit instruction that teams "explain what remains incomplete."
 
 ## 3. Why a from-scratch NumPy GRU instead of PyTorch/TensorFlow?
 
