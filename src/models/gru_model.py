@@ -43,6 +43,9 @@ def dtanh(y):
 class SimpleGRUClassifier:
     def __init__(self, n_features, hidden_size=8, seed=42):
         rng = np.random.default_rng(seed)
+        self._rng = rng  # saved so fit() can reuse the SAME seeded generator
+                          # for shuffling, instead of the unseeded global
+                          # np.random state (see fit() docstring below)
         scale = 1.0 / np.sqrt(hidden_size)
         self.h = hidden_size
         self.n = n_features
@@ -153,9 +156,17 @@ class SimpleGRUClassifier:
         return loss
 
     def fit(self, X, y, epochs=30, batch_size=64, lr=0.05, verbose=True):
+        # Uses self._rng (seeded in __init__ from the `seed` argument) rather
+        # than the unseeded global np.random state, so that two runs with the
+        # same seed produce IDENTICAL results — this was previously a real
+        # bug: results drifted run-to-run (e.g. AUC 0.945 vs 0.949, lead time
+        # 43.0h vs 42.7h across two runs of the same script) because the
+        # epoch shuffle used np.random.permutation directly instead of the
+        # seeded generator. Fixed for reproducibility, which the evaluation
+        # numbers cited in the proposal and README depend on being stable.
         n = len(X)
         for epoch in range(epochs):
-            idx = np.random.permutation(n)
+            idx = self._rng.permutation(n)
             epoch_loss = 0.0
             n_batches = 0
             for start in range(0, n, batch_size):

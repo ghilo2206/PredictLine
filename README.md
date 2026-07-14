@@ -125,6 +125,22 @@ This repository was built in a development environment without internet access t
 
 Before further scale-up (GPU training on ZCHPC CCE, larger hyperparameter search), this should be swapped for `torch.nn.GRU`. The architecture, feature set, and evaluation methodology are unaffected — only the execution backend changes.
 
+### Measured model size and inference latency
+
+The proposal's edge deployment target (Section 2.6) is a model under 256MB RAM with under 100ms inference latency. Measured against the actual trained model (hidden size 8, 4 input features):
+
+```
+Total parameters:        321
+Size, float32:            1.25 KB
+Size, int8 quantized:     0.31 KB
+Headroom vs 256MB budget: ~209,000x
+
+Single-window inference latency (unoptimized NumPy, cloud sandbox CPU):
+  Mean: 0.41 ms   P95: 0.62 ms   Max: 0.85 ms
+```
+
+This is a genuine measurement of the actual model, not an assumption — but it was measured on a cloud sandbox CPU, not the target ARM Cortex-A class edge gateway hardware referenced in the proposal. Given the model's size (a few hundred parameters), meeting the latency budget on real edge hardware is very likely, but this remains a claim to verify on physical hardware before being treated as confirmed — see [Section 9](#9-known-limitations).
+
 ## 6. Dataset provenance
 
 `src/data_pipeline.py` generates **synthetic** telemetry (signal loss, latency, packet loss, temperature) with an injected slow degradation ramp before a hard fault, modeling the general shape of OPGW/IoT fault progression described in the literature. It is not real Powertel data.
@@ -176,7 +192,7 @@ Full description in the proposal, Section 2.4.
 - Real Powertel telemetry is not yet integrated; a data-sharing agreement is pending.
 - The FastAPI endpoint is implemented but not yet tested against a live running server.
 - The from-scratch GRU has not been benchmarked against a framework implementation (PyTorch) for speed or numerical parity — expected to be close given identical gate math, but unverified.
-- Edge deployment targets (quantized model, <256MB RAM, <100ms inference latency) are design targets, not yet validated on physical hardware.
+- Edge deployment targets (quantized model, <256MB RAM, <100ms inference latency): model size is measured and comfortably within budget (321 parameters, ~1.25KB — see Section 5); inference latency is measured at under 1ms but only on a cloud sandbox CPU, not yet on physical target edge hardware.
 - 8 of 13 cisco-ie/telemetry case folders are not yet integrated (format-specific parsing required; see `cisco_adapter.py`).
 - The TelecomTS side of the cross-dataset harness runs against schema-accurate mock data; real-file integration is planned follow-up work.
 - No dashboard/frontend yet.
