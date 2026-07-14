@@ -1,0 +1,64 @@
+[project]
+name = "predictline"
+version = "0.1.0"
+description = "AI-based predictive fault detection for smart grid communication networks (AI4I Challenge 2026, Track 3: Development)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Mlalazi Mzwakhe" },
+    { name = "Laurah Murenge" },
+    { name = "Gift Ndlovu" },
+    { name = "Keith Ufumeli" },
+    { name = "Wellington Nhidza" },
+]
+keywords = [
+    "predictive-maintenance",
+    "smart-grid",
+    "network-telemetry",
+    "gru",
+    "anomaly-detection",
+    "fault-detection",
+]
+
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.2.2",
+    "scikit-learn==1.5.0",
+    "fastapi==0.111.0",
+    "uvicorn==0.30.1",
+    "pydantic==2.7.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.2.2",
+]
+# Planned upgrade path (see README Section 5): once GPU access is available
+# (ZCHPC CCE), swap the from-scratch NumPy GRU for an equivalent
+# torch.nn.GRU implementation. Not yet a runtime dependency.
+gpu = [
+    "torch==2.3.1",
+]
+
+[project.urls]
+Repository = "https://github.com/ghilo2206/PredictLine"
+
+# --- Tool configuration ---
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
