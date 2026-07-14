@@ -162,7 +162,7 @@ Full description in the proposal, Section 2.4.
 
 ## 10. Team
 
-- Mlalazi Mzwakhe — Graduate Trainee [Powertel Communications
+- Mlalazi Mzwakhe — Powertel Communications
 - Laurah Murenge - Telone Pvt Ltd
 - Gift Ndlovu — Telone Pvt Ltd
 - Keith Ufumeli — Telone Pvt Ltd
