@@ -162,9 +162,12 @@ Full description in the proposal, Section 2.4.
 
 ## 10. Team
 
-- Mlalazi Mzwakhe — University of Zimbabwe, Department of Electronics and Telecommunications Engineering
-- [Team member] — Powertel Communications
-- [Team member(s)] — TelOne
+- Mlalazi Mzwakhe — Graduate Trainee [Powertel Communications
+- - Laurah Murenge - Telone Pvt Ltd
+- Gift Ndlovu — Telone Pvt Ltd
+- Keith Ufumeli — Telone Pvt Ltd
+- Wellington Nhidza -Telone Pvt Ltd
+
 
 ## 11. Licence
 
