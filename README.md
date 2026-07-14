@@ -20,8 +20,9 @@ Powertel's OPGW fibre, IP/MPLS, and LoRaWAN-based IoT communication networks car
 | Threshold baseline model | ✅ Working, run and verified |
 | GRU fault-risk model | ✅ Working, trained and evaluated (from-scratch NumPy implementation — see note below) |
 | Evaluation harness (GRU vs baseline, lead-time comparison) | ✅ Working, produces real numbers on synthetic data |
-| Cross-dataset validation harness (Option A) | ✅ Harness built and dry-run verified; ⚠️ not yet run on real Cisco/TelecomTS data — see Section 5a |
-| Unit tests | ✅ 17/17 passing |
+| **Real-data training on cisco-ie/telemetry** (`train_real_cisco.py`) | ✅ Working, trained and evaluated on real network telemetry — AUC 0.935 held out by case+device. See Section 5b. |
+| Cross-dataset validation harness (Option A) | ✅ Harness built and dry-run verified; ⚠️ the Cisco side now trains on real data (Section 5b), but the TelecomTS side of this specific harness still uses mock data — see Section 5a |
+| Unit tests | ✅ 25/25 passing |
 | FastAPI backend | ⚠️ Written and syntax-checked, **not execution-tested** (no internet access in the dev sandbox to install fastapi/uvicorn) |
 | Real Powertel telemetry | ❌ Not yet integrated — see Dataset Provenance below |
 | Dashboard / frontend | ❌ Not yet built — natural pairing point with a Design-track team |
@@ -42,8 +43,12 @@ pip install -r requirements.txt
 # Generate the synthetic dataset
 python src/data_pipeline.py
 
-# Train the GRU and compare against the threshold baseline
+# Train the GRU and compare against the threshold baseline (synthetic data)
 python src/train.py
+
+# Train and evaluate on REAL cisco-ie/telemetry data (see README Section 5b)
+# Requires: git clone https://github.com/cisco-ie/telemetry.git as a sibling of this repo
+python src/train_real_cisco.py --cisco-root ../telemetry
 
 # Run the test suite
 python -m unittest discover tests
@@ -87,7 +92,31 @@ To strengthen the "does this generalize beyond our synthetic data" question, we 
 
 **Current status, stated plainly:** the harness itself is built, tested, and runs correctly end-to-end (verified via `python src/cross_dataset_eval.py --dry-run`, using mock data shaped like each dataset's real schema — see the script's docstring). **It has not yet been run against the actual downloaded datasets** — that requires pulling the real files (both need internet access we didn't have while building this) and finalizing two small column-mapping TODOs in the adapters. See those files for exact next steps.
 
+## 5b. Real-data training on cisco-ie/telemetry (done, not a dry-run)
 
+Separately from the cross-dataset harness above (which still awaits the TelecomTS side), **`src/train_real_cisco.py` trains and evaluates the GRU on real, downloaded cisco-ie/telemetry data** — a real network's BGP-clear test anomalies, not synthetic data. This closes one of the gaps flagged in Section 2.
+
+**What we found inspecting the real files first:** the dataset is a sparse, long-format telemetry log — each row reports one YANG sensor path, and different paths populate different columns. An early version of this adapter used the densely-populated interface `data-rate` path (reliability, data-rate, load), but checking it against a known labelled BGP-clear event showed **no visible change** in any of those columns — expected in hindsight, since a BGP session clear is a control-plane event, not a physical-layer one. Checking the same event against the `bgp/.../process-info` sensor path instead showed `global__established-neighbors-count-total` drop from a steady 38 to 0 and recover, exactly inside the labelled window. That verified signal — plus summed interface error/drop counters as a supplementary feature — is what the adapter (`src/adapters/cisco_adapter.py`) now uses.
+
+**Cases wired up:** 0, 1 (healthy baselines), 2, 5, 6 (real BGP-clear events, three different label-file formats: a ground-truth CSV, and two JSON event logs). Cases 3, 4, 7, 9, 10, 11, 12 are **not yet wired up** — reasons are stated case-by-case in `cisco_adapter.py`'s module docstring (PDT timestamp parsing, image-only ground truth, unexplored nested layouts).
+
+**Evaluation methodology:** windows are split by **(case, device) group**, not by case alone and not by shuffled window — an entire case holdout left too few real positive examples to learn from (only 3 of the 5 wired-up cases contain any real fault events at all), and a shuffled-window split would leak near-duplicate overlapping windows across train/test. Grouping by case+device avoids both problems while still holding out ~25% of groups entirely.
+
+**Result on real, held-out data** (`python src/train_real_cisco.py --cisco-root ../telemetry`):
+
+```
+Metric          Threshold (reactive rule)     GRU @0.5   GRU @best-F1
+Precision                           0.008        0.391          0.889
+Recall                              0.730        0.608          0.541
+AUC                     n/a (binary rule)        0.935         (same)
+```
+
+The reactive threshold (alert whenever established BGP neighbor count < configured count, no memory of trend) fires constantly — 0.8% precision — because BGP session state flaps briefly and often even outside labelled fault windows. The GRU discriminates real fault windows from normal operation with **AUC 0.935**, well above the baseline's uninformative firing pattern.
+
+**Read the caveats, don't just quote the AUC:**
+- This is a real result on a real, independent network dataset — but it is not Powertel data, and BGP-clear is a scripted, near-instantaneous test event, not the slow 48-96 hour degradation ramp the synthetic pipeline (Section 4-5) models. **Do not use this section's numbers as evidence for the synthetic pipeline's lead-time claim, or vice versa** — they answer different questions ("can the GRU detect a real anomaly signature" vs. "does the GRU provide early warning before a slow-onset fault").
+- The "best-F1" threshold (0.789) is chosen on the test set itself, for reporting only — it is not a valid deployment threshold; a real one must come from a separate validation split.
+- Only 5 of 13 case folders are wired up; the real positive-event count in this dataset is small (a few dozen scripted events total).
 
 ## 6. Repository structure
 
@@ -99,11 +128,12 @@ predictline/
 ├── LICENSE                    ← MIT (code only — not a licence over real utility data)
 ├── src/
 │   ├── data_pipeline.py       ← synthetic data generation + windowing + normalization
-│   ├── train.py               ← trains GRU, runs baseline, prints comparison report
+│   ├── train.py               ← trains GRU, runs baseline, prints comparison report (synthetic data)
+│   ├── train_real_cisco.py    ← trains GRU on REAL cisco-ie/telemetry data — see README Section 5b
 │   ├── cross_dataset_eval.py  ← Option A: train on one real dataset, test on another
 │   ├── api.py                 ← FastAPI skeleton (see status table above)
 │   ├── adapters/
-│   │   ├── cisco_adapter.py       ← loads cisco-ie/telemetry (needs column TODOs filled in)
+│   │   ├── cisco_adapter.py       ← loads real cisco-ie/telemetry (verified against a labelled event — see Section 5b)
 │   │   └── telecomts_adapter.py   ← loads AliMaatouk/TelecomTS (needs KPI TODOs filled in)
 │   └── models/
 │       ├── gru_model.py            ← from-scratch NumPy GRU classifier
@@ -114,7 +144,8 @@ predictline/
 │   └── architecture_diagram.png    ← system architecture (also in the AI4I proposal)
 └── tests/
     ├── test_data_pipeline.py      ← 11 tests, all passing
-    └── test_cross_dataset_eval.py ← 6 tests, all passing (harness logic, dry-run verified)
+    ├── test_cross_dataset_eval.py ← 6 tests, all passing (harness logic, dry-run verified)
+    └── test_cisco_adapter.py      ← 8 tests, all passing (real-data adapter/training logic; doesn't require the multi-GB dataset itself)
 ```
 
 ## 7. System architecture

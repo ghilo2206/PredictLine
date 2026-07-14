@@ -1,0 +1,17 @@
+# Virtual environment - never commit, recreate locally with:
+#   python -m venv venv && pip install -r requirements.txt
+venv/
+env/
+.venv/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Environment secrets
+.env
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
